@@ -1,0 +1,73 @@
+{
+  "name": "vue-store-oidc",
+  "version": "0.5.10-beta1",
+  "files": [
+    "dist/store-oidc.d.ts",
+    "dist/store-oidc.js",
+    "dist/store-oidc.js.map"
+  ],
+  "main": "dist/store-oidc.js",
+  "bin": "dist/store-oidc.js",
+  "types": "dist/store-oidc.d.ts",
+  "description": "Vue.js implementation of oidc-client-ts using vue stores (pinia, vuex) and vue-router",
+  "keywords": [
+    "vue",
+    "vuejs",
+    "oidc",
+    "oidc-client",
+    "open id",
+    "open id client",
+    "vue oidc",
+    "vue open id"
+  ],
+  "author": "Radek Rezac",
+  "license": "MIT",
+  "homepage": "https://github.com/elvodora/vue-store-oidc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elvodora/vue-store-oidc.git"
+  },
+  "peerDependencies": {
+    "oidc-client-ts": "^2.0.4",
+    "pinia": "^2.0.14",
+    "vue-router": "^4.0.15"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.18.2",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-typescript": "^8.3.2",
+    "@types/chai": "^4.3.1",
+    "@types/mocha": "^9.1.1",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "chai": "^4.3.6",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.16.0",
+    "ignore-styles": "^5.0.1",
+    "mocha": "^10.0.0",
+    "mock-local-storage": "^1.1.23",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.74.1",
+    "rollup-plugin-dts": "^4.2.1",
+    "sinon": "^14.0.0",
+    "ts-node": "^10.8.0",
+    "typescript": "^4.7.2",
+    "uglify-js": "^3.15.5"
+  },
+  "scripts": {
+    "compile": "tsc",
+    "lint": "eslint \"**/*.ts\"",
+    "_clear": "rimraf build/compiled/* && rimraf dist/*",
+    "_tsc": "tsc",
+    "_make-bundle": "rollup --config",
+    "build": "run-s _clear _tsc _make-bundle",
+    "watch": "tsc --watch",
+    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha -r ts-node/register -r mock-local-storage tests/**/*.spec.ts",
+    "pretest2": "npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@types/node": "^17.0.35",
+    "typedoc": "^0.23.7"
+  }
+}

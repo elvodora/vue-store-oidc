@@ -1,0 +1,36 @@
+{
+  // see https://www.typescriptlang.org/tsconfig to better understand tsconfigs
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "outDir": "build/compiled",
+    "target": "ES2019",
+    "module": "esnext",
+    "lib": ["ES2019", "DOM", "DOM.Iterable"],
+    "sourceMap": true,
+    "removeComments": false,
+    //"incremental": true,
+    "noEmitOnError": true,
+    //"tsBuildInfoFile": "tsconfig.tsbuildinfo",
+    "declaration": true,
+    // stricter type-checking for stronger correctness. 
+    "strict": true,
+    // interop between ESM and CJS modules. 
+    "esModuleInterop": false,
+    // significant perf increase by skipping checking .d.ts files, particularly those in node_modules. 
+    //"skipLibCheck": true,
+    // error out if import and file system have a casing mismatch. 
+    //"forceConsistentCasingInFileNames": true,
+    // ensure type imports are side-effect free by enforcing that `import type` is used
+    //"importsNotUsedAsValues": "error",
+    // prevent the use of features that are incompatible with isolated transpilation
+    //"isolatedModules": true,
+  },
+  "include": ["src/"],
+  "exclude": [
+    "./test/",
+    "./tests/",
+    "./node_modules/",
+    "./dist/",
+    "./build/"
+  ],
+}
