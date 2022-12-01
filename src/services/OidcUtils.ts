@@ -31,7 +31,7 @@ export const OidcUtils = {
       }
       else {
         if (option in payload) {
-          if (payload.option) return option
+          if (payload[option]) return payload[option]
         }
       }
     }
