@@ -1,17 +1,31 @@
 /*
-  Static Classes OidcHelpers, OidcUtils, OidcBrowserEvents     
+  Static helper classes
 */      
-export { OidcHelpers } from './services/OidcHelpers'              
-export { OidcUtils, PayloadType } from './services/OidcUtils'     
-export { OidcBrowserEvents, UserManagerEvents, userManagerEventPrefix } from './services/OidcBrowserEvents'    
+            
+export { OidcUtils, PayloadType, ObjectIndexType } from './services/OidcUtils'     
+export { OidcBrowserEvents, OidcEvents, OIDC_BBROWSER_EVENT_PREFIX } from './services/OidcBrowserEvents' 
+export { OidcObjectMapper } from './services/OidcObjectMapper'    
 /*
-  Class StoreOidcClient    
+  Class OidcStoreOidcClient    
 */      
-export { StoreOidcClient, StoreOidcClientSettings,  OidcStoreSettings, StoreOidcListeners, OidcSigninSilentOptions } from './StoreOidcClient'        
+export { OidcStoreOidcClient } from './OidcStoreOidcClient'        
+/*
+  Class OidcStoreOidcClientSettings    
+*/      
+export { OidcStoreOidcClientSettings } from './types/OidcStoreOidcClientSettings'        
+
+/*
+  OidcUser     
+*/      
+export { OidcUser, OidcUserProfile, OidcStandardClaims, OidcAddressClaim } from './types/OidcUser'  
+/*
+  OidcEventListeners     
+*/      
+export { OidcStoreEventListenersKeyType, OidcStoreErrorEventListenersKey, OidcStoreEventListener } from './types/OidcStoreEventListeners'  
 /*
   Class OidcStore     
 */      
-export { OidcStore, OidcStoreMembers } from './OidcStore'  
+export { OidcStore, OidcStoreMembers, OidcStoreSettings, OidcSigninSilentOptions } from './OidcStore'  
 
 /*
   Vue store memebers types    

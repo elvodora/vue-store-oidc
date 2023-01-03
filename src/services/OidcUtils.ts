@@ -1,24 +1,35 @@
-export type PayloadType = string | { [key: string]: any }
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type ObjectIndexType = { [key: string]: any };
+export type PayloadType = string | ObjectIndexType;
 
+/**
+ * @category Static Classes
+ */
 export const OidcUtils = {
-  ObjectAssign: (objects: any[]) => {
+  ObjectAssign: (objects: object[]) => {
     return objects.reduce(function (
-      r: { [x: string]: any },
-      o: { [x: string]: any }
+      target: ObjectIndexType,
+      source: ObjectIndexType
     ) {
-      Object.keys(o || {}).forEach(function (k) {
-        r[k] = o[k];
+      Object.keys(source || {}).forEach((key) => {
+        target[key] = source[key];
       });
-      return r;
-    }, {});
+      return target;
+    },
+    {});
   },
   ParseJwt: (token: string) => {
     try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        base64
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
       return JSON.parse(jsonPayload);
     } catch (error) {
       return {};
@@ -26,26 +37,25 @@ export const OidcUtils = {
   },
   PayloadItem: (payload: PayloadType, option: string): any => {
     if (payload) {
-      if (typeof payload === 'string') {
-        return payload
-      }
-      else {
+      if (typeof payload === "string") {
+        return payload;
+      } else {
         if (option in payload) {
-          if (payload.option) return option
+          if (payload.option) return option;
         }
       }
     }
-    return null
+    return null;
   },
   ErrorPayload: (context: string, error: Error): PayloadType => {
     return {
       context,
-      error: error && error.message ? error.message : error
-    }
+      error: error.message ? error.message : error,
+    };
   },
   FirstLetterUppercase: (string: string) => {
     return string && string.length > 0
       ? string.charAt(0).toUpperCase() + string.slice(1)
       : "";
   },
-}
+};

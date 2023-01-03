@@ -1,24 +1,46 @@
-import { Store } from "pinia";
 import { NavigationGuardNext, RouteLocationNormalized } from "vue-router";
-import {
-  OidcHelpers,
-  PiniaOidcStoreActions,
-  PiniaOidcStoreGetters,
-  PiniaOidcStoreState,
-} from "..";
+import { OidcStoreMembers } from "..";
 
+const _getOidcCallbackPath = (callbackUri: string, routeBase = "/") => {
+  if (callbackUri) {
+    const domainStartsAt = "://";
+    const hostAndPath = callbackUri.substring(
+      callbackUri.indexOf(domainStartsAt) + domainStartsAt.length
+    );
+    return hostAndPath
+      .substring(hostAndPath.indexOf(routeBase) + routeBase.length - 1)
+      .replace(/\/$/, "");
+  }
+  return null;
+};
+
+/**
+ * OidcRouter - static class (object) helper to define Vue Router Middleware methods (functions).
+ * @category Static Classes
+ */
 export const OidcRouter = {
-  CreatePiniaRouterMiddleware: (
-    store: Store<
-      string,
-      PiniaOidcStoreState,
-      PiniaOidcStoreGetters,
-      PiniaOidcStoreActions
-    >
-  ) => {
+  /**
+ * Create Router middleware for Pinia Store .
+ *
+ * 
+ * ```ts
+ *const app = createApp(App);
+ *const pinia = createPinia();
+ *app.use(pinia);
+ *
+ *const store = useOidcStore();
+ *router.beforeEach(OidcRouter.CreatePiniaRouterMiddleware(store));
+ *
+ *app.use(router);
+ * ```
+ *
+ *
+ * @param store Pinia OidcStore.
+ * @returns Router Middleware function for managing Authentication and Authorization by OidcStore.
+ */
+  CreatePiniaRouterMiddleware: (store: OidcStoreMembers) => {
     return (
       to: RouteLocationNormalized,
-      from: RouteLocationNormalized,
       next: NavigationGuardNext
     ) => {
       store.oidcCheckAccess(to).then((hasAccess: boolean) => {
@@ -79,19 +101,21 @@ export const OidcRouter = {
     if (
       route.path &&
       route.path.replace(/\/$/, "") ===
-        OidcHelpers.GetOidcCallbackPath(redirect_uri || "", routeBase || "")
+        _getOidcCallbackPath(redirect_uri || "", routeBase || "")
     ) {
       return true;
     }
     if (
       route.path &&
-      route.path.replace(/\/$/, "") === OidcHelpers.GetOidcCallbackPath(popupRedirectUri || "", routeBase || "")
+      route.path.replace(/\/$/, "") ===
+        _getOidcCallbackPath(popupRedirectUri || "", routeBase || "")
     ) {
       return true;
     }
     if (
       route.path &&
-      route.path.replace(/\/$/, "") === OidcHelpers.GetOidcCallbackPath(silentRedirectUri || "", routeBase || "")
+      route.path.replace(/\/$/, "") ===
+        _getOidcCallbackPath(silentRedirectUri || "", routeBase || "")
     ) {
       return true;
     }

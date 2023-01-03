@@ -1,16 +1,27 @@
+
 import { OidcUtils } from "..";
-
-export const userManagerEventPrefix = 'OidcStore:'
-export type UserManagerEvents = 'userLoaded' | 'userUnloaded' | 'accessTokenExpiring' | 
-                                'accessTokenExpired' | 'silentRenewError' | 'userSignedOut'
-
+/**
+ * @category Constants
+ */
+export const OIDC_BBROWSER_EVENT_PREFIX = "vuestoreoidc";
+export type OidcEvents =
+  | "userLoaded"
+  | "userUnloaded"
+  | "accessTokenExpiring"
+  | "accessTokenExpired"
+  | "silentRenewError"
+  | "userSignedOut";
+/**
+ * @category Static Classes
+ */
 export const OidcBrowserEvents = {
   // Use native custom event or DIY for IE
   CreateCustomEvent: (
-    eventName: UserManagerEvents,
-    detail: any,
-    params: CustomEventInit<unknown> | undefined) => {
-    const prefixedEventName = `${userManagerEventPrefix}:${eventName}`;
+    eventName: OidcEvents,
+    detail: object,
+    params: object
+  ) => {
+    const prefixedEventName = `${OIDC_BBROWSER_EVENT_PREFIX}:${eventName}`;
 
     if (typeof window.CustomEvent === "function") {
       params = OidcUtils.ObjectAssign([params, { detail: detail }]);
@@ -20,14 +31,15 @@ export const OidcBrowserEvents = {
     return evt;
   },
   DispatchCustomBrowserEvent: (
-    eventName: UserManagerEvents,
-    detail = {},
-    params = {}) => {
+    eventName: OidcEvents,
+    detail?: object,
+    params?: object
+  ) => {
     if (window) {
       const event = OidcBrowserEvents.CreateCustomEvent(
         eventName,
-        OidcUtils.ObjectAssign([{}, detail]),
-        params
+        detail || {},
+        params || {}
       );
       window.dispatchEvent(event);
     }
@@ -48,5 +60,5 @@ export const OidcBrowserEvents = {
       iframe.src = url;
       window.document.body.appendChild(iframe);
     });
-  }
-}
+  },
+};

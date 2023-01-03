@@ -1,27 +1,17 @@
-import {
-  defineStore,
-  StateTree,
-  StoreDefinition,
-  _ActionsTree,
-  _GettersTree,
-  Store,
-} from "pinia";
-import type { User } from "oidc-client-ts";
+import { defineStore, StateTree, _ActionsTree, _GettersTree } from "pinia";
 import { RouteLocationNormalized } from "vue-router";
 // Static Classes
 import {
   OidcBrowserEvents,
   OidcUtils,
   PayloadType,
-  OidcSigninSilentOptions,
   OidcRouter,
+  OidcObjectMapper,
+  OidcUser,
+  OidcStoreErrorEventListenersKey,
 } from ".";
-// Class StoreOidcClient used  as state member
-import {
-  StoreOidcClientSettings,
-  OidcStoreSettings,
-  StoreOidcListeners,
-} from ".";
+// Class OidcStoreOidcClient used  as state member
+import { OidcStoreOidcClientSettings, OidcStoreSettings, OidcStoreEventListener } from ".";
 // Parent OidcStore Class
 import {
   OidcStore,
@@ -50,43 +40,31 @@ export interface PiniaOidcStoreActions
     OidcStoreMutations,
     _ActionsTree {}
 
-export type PiniaOidcStoreDefinition = StoreDefinition<
-  "oidcAuth",
-  PiniaOidcStoreState,
-  PiniaOidcStoreGetters,
-  PiniaOidcStoreActions
->;
-export type PiniaOidcStoreType = Store<
-  "oidcAuth",
-  PiniaOidcStoreState,
-  PiniaOidcStoreGetters,
-  PiniaOidcStoreActions
->;
-
 export class PiniaOidcStore extends OidcStore {
   private _actions: OidcStoreActionsMutations = {
     oidcCheckAccess(this: OidcStoreMembers, route: RouteLocationNormalized) {
       return new Promise((resolve) => {
-        if (OidcRouter.IsRouteOidcCallback(route, this.oidcStoreSettings)) {
+        if (OidcRouter.IsRouteOidcCallback(route)) {
           resolve(true);
           return;
         }
         let hasAccess = true;
-        const isAuthenticatedInStore = this.oid;
-        this.storeOidcClient?.GetUser().then((user) => {
-          if (!user || user.expired) {
+        const isAuthenticatedInStore = this.storeSettings?.isAuthenticatedBy
+          ? true
+          : false;
+        this.storeOidcClient?.UserExpired().then((oidcUserExpired) => {
+          if (oidcUserExpired) {
             const authenticateSilently =
-              this.oidcClientSettings.silentRedirectUri &&
-              this.oidcClientSettings.automaticSilentSignin;
+              this.storeOidcClientSettings?.silentRedirectUri &&
+              this.storeOidcClientSettings.automaticSilentSignin;
             if (OidcRouter.IsRoutePublic(route)) {
               if (isAuthenticatedInStore) {
                 this.unsetOidcAuth();
               }
               if (authenticateSilently) {
-                this.authenticateOidc();
                 this.authenticateOidcSilent({
                   ignoreErrors: true,
-                } as OidcSigninSilentOptions);
+                });
               }
             } else {
               const authenticate = () => {
@@ -99,15 +77,15 @@ export class PiniaOidcStore extends OidcStore {
               if (authenticateSilently) {
                 this.authenticateOidcSilent({
                   ignoreErrors: true,
-                } as OidcSigninSilentOptions)
+                })
                   .then(() => {
                     this.storeOidcClient
-                      ?.GetUser()
-                      .then((user) => {
-                        if (!user || user.expired) {
+                      ?.UserExpired()
+                      .then((oidcUserExpired) => {
+                        if (oidcUserExpired) {
                           authenticate();
                         }
-                        resolve(!!user);
+                        resolve(!!this.getUser());
                       })
                       .catch(() => {
                         authenticate();
@@ -125,19 +103,19 @@ export class PiniaOidcStore extends OidcStore {
               hasAccess = false;
             }
           } else {
-            this.oidcWasAuthenticated(user);
+            this.getUser().then((user) => this.oidcWasAuthenticated(user));
             if (!isAuthenticatedInStore) {
               if (
-                this.storeOidcClient?.OidcEventListeners &&
-                typeof this.storeOidcClient?.OidcEventListeners.userLoaded ===
-                  "function"
+                this.storeEventListeners &&
+                typeof this.storeEventListeners.oidcUserLoaded === "function"
               ) {
-                this.storeOidcClient?.OidcEventListeners.userLoaded(user);
+                if (this.user)
+                  this.storeEventListeners.oidcUserLoaded(this.user);
               }
-              if (this.oidcStoreSettings.dispatchEventsOnWindow) {
+              if (this.storeSettings?.dispatchEventsOnWindow) {
                 OidcBrowserEvents.DispatchCustomBrowserEvent(
                   "userLoaded",
-                  user
+                  this.user as object
                 );
               }
             }
@@ -146,14 +124,35 @@ export class PiniaOidcStore extends OidcStore {
         });
       });
     },
+    authenticateOidc(this: OidcStoreMembers, payload?) {
+      const redirectPath = payload
+        ? OidcUtils.PayloadItem(payload, "redirectPath")
+        : null;
+      if (redirectPath) {
+        sessionStorage.setItem("vue_oidc_active_route", redirectPath);
+      } else {
+        sessionStorage.removeItem("vue_oidc_active_route");
+      }
+      const options = payload
+        ? OidcUtils.PayloadItem(payload, "options")
+        : this.storeSettings?.defaultSigninRedirectOptions || {};
+      return this.storeOidcClient
+        ?.SigninRedirect(options)
+        .catch((err: Error) =>
+          this.setOidcError(OidcUtils.ErrorPayload("authenticateOidc", err))
+        );
+    },
     authenticateOidcSilent(this: OidcStoreMembers, payload?: PayloadType) {
-      // Take options for signinSilent from 1) payload or 2) this.storeOidcClient?.OidcStoreSettings if defined there
       const options = payload
         ? OidcUtils.PayloadItem(payload, "option")
-        : {} || this.oidcStoreSettings.defaultSigninSilentOptions || {};
-      return new Promise<User | null>((resolve, reject) => {
+        : this.storeSettings?.defaultSigninSilentOptions || {};
+      return new Promise<OidcUser | null>((resolve, reject) => {
         this.storeOidcClient
           ?.SigninSilent(options)
+          .then((status) => {
+            if (status) return this.getUser();
+            else return null;
+          })
           .then((user) => {
             this.oidcWasAuthenticated(user);
             resolve(user);
@@ -171,29 +170,30 @@ export class PiniaOidcStore extends OidcStore {
           });
       });
     },
-    authenticateOidc(this: OidcStoreMembers, payload?) {
-      const redirectPath = payload
-        ? OidcUtils.PayloadItem(payload, "redirectPath")
-        : "";
-      if (redirectPath) {
-        sessionStorage.setItem("vue_oidc_active_route", redirectPath);
-      } else {
-        sessionStorage.removeItem("vue_oidc_active_route");
-      }
-      // Take options for signinRedirect from 1) payload or 2) storeSettings if defined there
-      const options = payload
-        ? OidcUtils.PayloadItem(payload, "options")
-        : {} || this.oidcStoreSettings.defaultSigninRedirectOptions || {};
-      return this.storeOidcClient
-        ?.SigninRedirect(options)
-        .catch((err: Error) =>
-          this.setOidcError(OidcUtils.ErrorPayload("authenticateOidc", err))
-        );
+    authenticateOidcPopup(this: OidcStoreMembers, payload?: PayloadType) {
+      return new Promise((resolve, reject) => {
+        const options = payload
+          ? OidcUtils.PayloadItem(payload, "options")
+          : {} || this.storeSettings?.defaultSigninPopupOptions || {};
+        this.storeOidcClient
+          ?.SigninPopup(options)
+          .then(() => this.getUser())
+          .then((user) => {
+            resolve(this.oidcWasAuthenticated(user));
+          })
+          .catch((err) => {
+            this.setOidcError(
+              OidcUtils.ErrorPayload("authenticateOidcPopup", err)
+            );
+            reject(err);
+          });
+      });
     },
     oidcSignInCallback(this: OidcStoreMembers, url) {
       return new Promise((resolve, reject) => {
         this.storeOidcClient
           ?.SigninRedirectCallback(url)
+          .then(() => this.getUser())
           .then((user) => {
             this.oidcWasAuthenticated(user);
             resolve(sessionStorage.getItem("vue_oidc_active_route") || "/");
@@ -207,22 +207,6 @@ export class PiniaOidcStore extends OidcStore {
           });
       });
     },
-    authenticateOidcPopup(this: OidcStoreMembers, payload?: PayloadType) {
-      // Take options for signinPopup from 1) payload or 2) this.storeOidcClient?.OidcStoreSettings if defined there
-      const options = payload
-        ? OidcUtils.PayloadItem(payload, "options")
-        : {} || this.oidcStoreSettings.defaultSigninPopupOptions || {};
-      return this.storeOidcClient
-        ?.SigninPopup(options)
-        .then((user) => {
-          this.oidcWasAuthenticated(user);
-        })
-        .catch((err) => {
-          this.setOidcError(
-            OidcUtils.ErrorPayload("authenticateOidcPopup", err)
-          );
-        });
-    },
     oidcSignInPopupCallback(this: OidcStoreMembers, url) {
       return new Promise((resolve, reject) => {
         this.storeOidcClient?.SigninPopupCallback(url).catch((err) => {
@@ -235,17 +219,15 @@ export class PiniaOidcStore extends OidcStore {
       });
     },
     oidcWasAuthenticated(this: OidcStoreMembers, user) {
-      if (user) {
         this.setOidcAuth(user);
-      }
-      if (!this.events_are_bound) {
+      if (!this.eventsAreBound) {
         this.storeOidcClient?.AddAccessTokenExpired(() => {
           this.unsetOidcAuth();
         });
-        if (this.oidcClientSettings.automaticSilentRenew) {
+        if (this.storeOidcClientSettings?.automaticSilentRenew) {
           this.storeOidcClient?.AddAccessTokenExpiring(() => {
             this.authenticateOidcSilent().catch((err) => {
-              this.storeOidcClient?.DispatchCustomErrorEvent(
+              this.dispatchCustomErrorEvent(
                 "automaticSilentRenewError",
                 OidcUtils.ErrorPayload("authenticateOidcSilent", err)
               );
@@ -255,29 +237,6 @@ export class PiniaOidcStore extends OidcStore {
         this.setOidcEventsAreBound();
       }
       this.setOidcAuthIsChecked();
-    },
-    storeUser(this: OidcStoreMembers, user) {
-      return this.storeOidcClient
-        ?.StoreUser(user)
-        .then(() => this.storeOidcClient?.GetUser())
-        .then((user) => this.oidcWasAuthenticated(user))
-        .catch((err) => {
-          this.setOidcError(OidcUtils.ErrorPayload("OidcStoreUser", err));
-          this.setOidcAuthIsChecked();
-          throw err;
-        });
-    },
-    getUser(this: OidcStoreMembers) {
-      return this.storeOidcClient?.GetUser().then((user) => {
-        if (user) this.setUser(user);
-        return user;
-      });
-    },
-    addOidcEventListener(this: OidcStoreMembers, payload) {
-      this.storeOidcClient?.AddOidcEventListener(payload);
-    },
-    removeOidcEventListener(this: OidcStoreMembers, payload) {
-      this.storeOidcClient?.RemoveOidcEventListener(payload);
     },
     signOutOidc(this: OidcStoreMembers, payload) {
       return this.storeOidcClient?.SignoutRedirect(payload).then(() => {
@@ -298,8 +257,7 @@ export class PiniaOidcStore extends OidcStore {
     signOutOidcSilent(this: OidcStoreMembers, payload) {
       return new Promise((resolve, reject) => {
         try {
-          this.storeOidcClient
-            ?.GetUser()
+          this.getUser()
             .then((user) => {
               const args = OidcUtils.ObjectAssign([
                 payload || {},
@@ -308,22 +266,23 @@ export class PiniaOidcStore extends OidcStore {
                 },
               ]);
               if (payload && OidcUtils.PayloadItem(payload, "id_token_hint")) {
-                args.id_token_hint = OidcUtils.PayloadItem(
-                  payload,
-                  "id_token_hint"
-                );
+                OidcUtils.ObjectAssign([
+                  args,
+                  OidcUtils.PayloadItem(payload, "id_token_hint"),
+                ]);
               }
               this.storeOidcClient
                 ?.CreateSignoutRequest(args)
                 .then((signoutRequest) => {
-                  OidcBrowserEvents.OpenUrlWithIframe(signoutRequest.url)
+                  const url = OidcUtils.PayloadItem(signoutRequest, "url");
+                  OidcBrowserEvents.OpenUrlWithIframe(url)
                     .then(() => {
                       this.removeUser();
                       resolve();
                     })
                     .catch((err) => reject(err));
                 })
-                .catch((err) => reject(err));
+                .catch((err: Error) => reject(err));
             })
             .catch((err) => reject(err));
         } catch (err) {
@@ -331,47 +290,94 @@ export class PiniaOidcStore extends OidcStore {
         }
       });
     },
-    removeUser(this: OidcStoreMembers) {
-      return this.removeOidcUser();
-    },
-    removeOidcUser(this: OidcStoreMembers) {
-      return this.storeOidcClient?.RemoveUser().then(() => {
-        this.unsetOidcAuth();
+    getUser(this: OidcStoreMembers) {
+      return new Promise((resolve, reject) => {
+        this.storeOidcClient
+          ?.GetUser()
+          .then((user) => {
+            let oidcUser = null;
+            if (user) {
+              oidcUser = OidcObjectMapper.User_To_OidcUser(user);
+              this.setUser(oidcUser);
+            }
+            resolve(oidcUser);
+          })
+          .catch((err) => {
+            this.setOidcError(OidcUtils.ErrorPayload("getUser", err));
+            this.setOidcAuthIsChecked;
+            reject(err);
+          });
       });
+    },
+    storeUser(this: OidcStoreMembers) {
+      return this.storeOidcClient
+        ?.StoreUser()
+        .then(() => this.getUser())
+        .then((user) => this.oidcWasAuthenticated(user))
+        .catch((err) => {
+          this.setOidcError(OidcUtils.ErrorPayload("OidcUser", err));
+          this.setOidcAuthIsChecked();
+          throw err;
+        });
+    },
+    removeUser(this: OidcStoreMembers) {
+      return new Promise((resolve, reject) => {
+        this.storeOidcClient
+          ?.RemoveUser()
+          .then(() => {
+            this.unsetOidcAuth();
+          })
+          .catch((err) => reject(err));
+      });
+    },
+    addOidcEventListener(this: OidcStoreMembers, payload) {
+      this.storeOidcClient?.AddOidcEventListener(payload);
+    },
+    removeOidcEventListener(this: OidcStoreMembers, payload) {
+      this.storeOidcClient?.RemoveOidcEventListener(payload);
     },
     clearStaleState(this: OidcStoreMembers) {
       return this.storeOidcClient?.ClearStaleState();
     },
+    dispatchCustomErrorEvent(
+      this: OidcStoreMembers,
+      eventName: OidcStoreErrorEventListenersKey,
+      payload: PayloadType
+    ) {
+      if (typeof this.storeEventListeners?.[eventName] === "function") {
+        this.storeEventListeners[eventName]?.(payload);
+      }
+    },
     // Mutations
-    setOidcAuth(this: OidcStoreMembers, user: User) {
-      this.user = user || null;
+    setOidcAuth(this: OidcStoreMembers, user: OidcUser | null) {
+      this.user = user;
       this.error = null;
     },
-    setUser(this: OidcStoreMembers, user: User) {
-      this.user = user;
+    setUser(this: OidcStoreMembers, user: OidcUser | null) {
+      this.user = user ;
     },
     unsetOidcAuth(this: OidcStoreMembers) {
       this.user = null;
     },
     setOidcAuthIsChecked(this: OidcStoreMembers) {
-      this.is_checked = true;
+      this.isChecked = true;
     },
     setOidcEventsAreBound(this: OidcStoreMembers) {
-      this.events_are_bound = true;
+      this.eventsAreBound = true;
     },
     setOidcError(this: OidcStoreMembers, payload: PayloadType) {
       if (payload) {
         this.error = OidcUtils.PayloadItem(payload, "error");
-        this.storeOidcClient?.DispatchCustomErrorEvent("oidcError", payload);
+        this.dispatchCustomErrorEvent("oidcError", payload);
       }
     },
   };
   constructor(
-    storeOidcClientSettings: StoreOidcClientSettings,
-    oidcStoreSettings?: OidcStoreSettings,
-    oidcEventListeners?: StoreOidcListeners
+    storeOidcClientSettings: OidcStoreOidcClientSettings,
+    storeSettings?: OidcStoreSettings,
+    storeEventListeners?: OidcStoreEventListener
   ) {
-    super(storeOidcClientSettings, oidcStoreSettings, oidcEventListeners);
+    super(storeOidcClientSettings, storeSettings, storeEventListeners);
   }
   get Actions() {
     return this._actions;

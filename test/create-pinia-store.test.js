@@ -144,11 +144,11 @@ describe("createStoreModule", function () {
     it("should set user in store and bind events", function () {
       const context = unAuthenticatedContext();
       sinon.spy(context, "commit");
-      storeModule.actions.oidcWasAuthenticated(context, oidcUser());
+      storeModule.actions.oidcWasAuthenticated(context, user());
       assert.equal(context.commit.getCall(0).args[0], "setOidcAuth");
       assert.equal(
         context.commit.getCall(0).args[1].id_token,
-        oidcUser().id_token
+        user().id_token
       );
       assert.equal(context.commit.getCall(1).args[0], "setOidcEventsAreBound");
       context.commit.restore();
@@ -160,7 +160,7 @@ describe("createStoreModule", function () {
       const context = unAuthenticatedContext();
       sinon.spy(context, "commit");
       return storeModule.actions
-        .oidcSignInCallback(context, oidcUser())
+        .oidcSignInCallback(context, user())
         .then(function (redirectUrl) {
           assert.equal(redirectUrl, false);
           context.commit.restore();
@@ -271,7 +271,7 @@ function authenticatedContext(storeSettings = {}) {
       dispatch: function (action, payload) {},
     }
   );
-  context.state = Object.assign({}, context.state, oidcUser());
+  context.state = Object.assign({}, context.state, user());
   return context;
 }
 
@@ -321,7 +321,7 @@ function protectedRoute() {
 
 function getUserPromise() {
   return new Promise(function (resolve) {
-    resolve(oidcUser());
+    resolve(user());
   });
 }
 
@@ -337,7 +337,7 @@ function silentSigningFailedPromise() {
   });
 }
 
-function oidcUser() {
+function user() {
   return {
     id_token: require("./id-token-2028-01-01"),
   };

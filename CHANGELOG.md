@@ -140,7 +140,7 @@
 *2020-03-11*
 
 ### Features
-* Add OidcStoreUser action
+* Add OidcUser action
 * Add clearStaleState action
 
 ## 3.4.2
