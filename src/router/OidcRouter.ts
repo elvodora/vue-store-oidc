@@ -80,7 +80,7 @@ export const OidcRouter = {
   },
   IsRouteOidcCallback(
     route: RouteLocationNormalized,
-    routeBase?: string,
+    routeBase?: string | null,
     redirect_uri?: string,
     popupRedirectUri?: string,
     silentRedirectUri?: string
