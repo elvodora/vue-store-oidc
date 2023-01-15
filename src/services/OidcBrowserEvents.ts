@@ -1,9 +1,9 @@
 
-import { OidcUtils } from "..";
+import { OIDC_BBROWSER_EVENT_PREFIX } from "../types";
+import { OidcUtils } from "./OidcUtils";
 /**
  * @category Constants
  */
-export const OIDC_BBROWSER_EVENT_PREFIX = "vuestoreoidc";
 export type OidcEvents =
   | "userLoaded"
   | "userUnloaded"

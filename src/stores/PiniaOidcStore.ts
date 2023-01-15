@@ -1,27 +1,25 @@
 import { defineStore, StateTree, _ActionsTree, _GettersTree } from "pinia";
 import { RouteLocationNormalized } from "vue-router";
-// Static Classes
+import { OidcBrowserEvents, OidcObjectMapper, OidcUtils } from "../services";
 import {
-  OidcBrowserEvents,
-  OidcUtils,
   PayloadType,
-  OidcRouter,
-  OidcObjectMapper,
-  OidcUser,
-  OidcStoreErrorEventListenersKey,
-} from ".";
-// Class OidcStoreOidcClient used  as state member
-import { OidcStoreOidcClientSettings, OidcStoreSettings, OidcStoreEventListener } from ".";
-// Parent OidcStore Class
-import {
-  OidcStore,
-  OidcStoreMembers,
+  OidcStoreOidcClientSettings,
+  OidcStoreSettings,
+  OidcStoreEventListener,
   OidcStoreState,
   OidcStoreGetters,
   OidcStoreActions,
   OidcStoreMutations,
   OidcStoreActionsMutations,
-} from ".";
+  OidcStoreMembers,
+  OidcUser,
+  OidcStoreErrorEventListenersKey,
+} from "../types";
+
+import { OidcRouter } from "../router";
+
+// Parent OidcStore Class
+import { OidcStore } from "./OidcStore";
 
 export interface PiniaOidcStoreState extends StateTree, OidcStoreState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,7 +94,6 @@ export class PiniaOidcStore extends OidcStore {
                     authenticate();
                     resolve(false);
                   });
-                return;
               }
               // If no silent signin is set up, perform explicit authentication and deny access
               authenticate();
@@ -219,7 +216,7 @@ export class PiniaOidcStore extends OidcStore {
       });
     },
     oidcWasAuthenticated(this: OidcStoreMembers, user) {
-        this.setOidcAuth(user);
+      this.setOidcAuth(user);
       if (!this.eventsAreBound) {
         this.storeOidcClient?.AddAccessTokenExpired(() => {
           this.unsetOidcAuth();
@@ -272,15 +269,10 @@ export class PiniaOidcStore extends OidcStore {
                 ]);
               }
               this.storeOidcClient
-                ?.CreateSignoutRequest(args)
+                ?.SignoutSilent(args)
                 .then((signoutRequest) => {
-                  const url = OidcUtils.PayloadItem(signoutRequest, "url");
-                  OidcBrowserEvents.OpenUrlWithIframe(url)
-                    .then(() => {
-                      this.removeUser();
-                      resolve();
-                    })
-                    .catch((err) => reject(err));
+                  this.removeUser();
+                  resolve(signoutRequest);
                 })
                 .catch((err: Error) => reject(err));
             })
@@ -354,7 +346,7 @@ export class PiniaOidcStore extends OidcStore {
       this.error = null;
     },
     setUser(this: OidcStoreMembers, user: OidcUser | null) {
-      this.user = user ;
+      this.user = user;
     },
     unsetOidcAuth(this: OidcStoreMembers) {
       this.user = null;

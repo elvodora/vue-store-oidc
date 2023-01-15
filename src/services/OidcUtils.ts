@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type ObjectIndexType = { [key: string]: any };
-export type PayloadType = string | ObjectIndexType;
-
+import { PayloadType, ObjectIndexType } from "../types";
 /**
  * @category Static Classes
  */

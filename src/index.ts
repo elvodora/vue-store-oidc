@@ -1,45 +1,33 @@
-/*
-  Static helper classes
-*/      
-            
-export { OidcUtils, PayloadType, ObjectIndexType } from './services/OidcUtils'     
-export { OidcBrowserEvents, OidcEvents, OIDC_BBROWSER_EVENT_PREFIX } from './services/OidcBrowserEvents' 
-export { OidcObjectMapper } from './services/OidcObjectMapper'    
-/*
-  Class OidcStoreOidcClient    
-*/      
-export { OidcStoreOidcClient } from './OidcStoreOidcClient'        
-/*
-  Class OidcStoreOidcClientSettings    
-*/      
-export { OidcStoreOidcClientSettings } from './types/OidcStoreOidcClientSettings'        
+export { OIDC_BBROWSER_EVENT_PREFIX } from "./types";
 
 /*
-  OidcUser     
-*/      
-export { OidcUser, OidcUserProfile, OidcStandardClaims, OidcAddressClaim } from './types/OidcUser'  
-/*
-  OidcEventListeners     
-*/      
-export { OidcStoreEventListenersKeyType, OidcStoreErrorEventListenersKey, OidcStoreEventListener } from './types/OidcStoreEventListeners'  
-/*
-  Class OidcStore     
-*/      
-export { OidcStore, OidcStoreMembers, OidcStoreSettings, OidcSigninSilentOptions } from './OidcStore'  
+  OidcStore interfaces and types    
+*/
+export {
+  OidcStoreOidcClientSettings,
+  OidcStoreSettings,
+  OidcUser,
+  OidcUserProfile,
+  OidcStandardClaims,
+  OidcAddressClaim,
+  OidcStoreEventListener,
+  OidcStoreMembers
+} from "./types";
 
 /*
-  Vue store memebers types    
-*/  
-export { OidcStoreState,  OidcStoreGetters, OidcStoreActions, OidcStoreMutations, OidcStoreActionsMutations } from './OidcStore'
-/*
-  Class PiniaOidcStore
-*/  
-export { PiniaOidcStore, PiniaOidcStoreState, PiniaOidcStoreActions, PiniaOidcStoreGetters } from './PiniaOidcStore'
+  Class PiniaOidcStore     
+*/
+export {
+  PiniaOidcStore,
+  PiniaOidcStoreState,
+  PiniaOidcStoreActions,
+  PiniaOidcStoreGetters,
+} from "./stores";
 /*
   Class VuexOidcStore
-*/  
-export { VuexOidcStore } from './VuexOidcStore'
+*/
+export { VuexOidcStore } from "./stores";
 /*
-  router    
-*/  
-export { OidcRouter } from './router/OidcRouter'
+  Static class OidcRouter    
+*/
+export { OidcRouter } from "./router";

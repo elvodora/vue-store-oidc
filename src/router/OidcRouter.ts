@@ -1,5 +1,7 @@
+import { Store } from "pinia";
 import { NavigationGuardNext, RouteLocationNormalized } from "vue-router";
-import { OidcStoreMembers } from "..";
+import { PiniaOidcStoreActions, PiniaOidcStoreGetters, PiniaOidcStoreState } from "../stores";
+
 
 const _getOidcCallbackPath = (callbackUri: string, routeBase = "/") => {
   if (callbackUri) {
@@ -35,12 +37,13 @@ export const OidcRouter = {
  * ```
  *
  *
- * @param store Pinia OidcStore.
+ * @param store OidcStore.
  * @returns Router Middleware function for managing Authentication and Authorization by OidcStore.
  */
-  CreatePiniaRouterMiddleware: (store: OidcStoreMembers) => {
+  CreatePiniaRouterMiddleware: (store: Store<"oidcAuth", PiniaOidcStoreState, PiniaOidcStoreGetters, PiniaOidcStoreActions>) => {
     return (
       to: RouteLocationNormalized,
+      from: RouteLocationNormalized,
       next: NavigationGuardNext
     ) => {
       store.oidcCheckAccess(to).then((hasAccess: boolean) => {
